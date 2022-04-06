@@ -18,9 +18,13 @@ interface Transition<E : Event> : VisitorAcceptor {
      */
     var argument: Any?
     val listeners: Collection<Listener>
+    val coListeners: Collection<CoListener>
 
     fun <L : Listener> addListener(listener: L): L
     fun removeListener(listener: Listener)
+
+    fun <L : CoListener> addCoListener(listener: L): L
+    fun removeCoListener(listener: CoListener)
 
     /**
      * Checks if the [event] matches this [Transition]
@@ -32,12 +36,25 @@ interface Transition<E : Event> : VisitorAcceptor {
     interface Listener {
         fun onTriggered(transitionParams: TransitionParams<*>) = Unit
     }
+
+    interface CoListener {
+        suspend fun onTriggered(transitionParams: TransitionParams<*>) = Unit
+    }
 }
 
 inline fun <reified E : Event> Transition<E>.onTriggered(crossinline block: (TransitionParams<E>) -> Unit) {
     addListener(object : Transition.Listener {
         @Suppress("UNCHECKED_CAST")
-        override fun onTriggered(transitionParams: TransitionParams<*>) = block(transitionParams as TransitionParams<E>)
+        override fun onTriggered(transitionParams: TransitionParams<*>) =
+            block(transitionParams as TransitionParams<E>)
+    })
+}
+
+inline fun <reified E : Event> Transition<E>.onCoTriggered(crossinline block: suspend (TransitionParams<E>) -> Unit) {
+    addCoListener(object : Transition.CoListener {
+        @Suppress("UNCHECKED_CAST")
+        override suspend fun onTriggered(transitionParams: TransitionParams<*>) =
+            block(transitionParams as TransitionParams<E>)
     })
 }
 

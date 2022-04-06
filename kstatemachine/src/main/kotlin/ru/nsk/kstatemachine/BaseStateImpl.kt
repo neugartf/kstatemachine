@@ -8,6 +8,9 @@ open class BaseStateImpl(override val name: String?, override val childMode: Chi
     private val _listeners = CopyOnWriteArraySet<IState.Listener>()
     override val listeners: Collection<IState.Listener> get() = _listeners
 
+    private val _coListeners = CopyOnWriteArraySet<IState.CoListener>()
+    override val coListeners: Collection<IState.CoListener> get() = _coListeners
+
     private val _states = mutableSetOf<InternalState>()
     override val states: Set<IState> get() = _states
 
@@ -45,6 +48,15 @@ open class BaseStateImpl(override val name: String?, override val childMode: Chi
 
     override fun removeListener(listener: IState.Listener) {
         _listeners.remove(listener)
+    }
+
+    override fun <L : IState.CoListener> addCoListener(listener: L): L {
+        require(_coListeners.add(listener)) { "$listener is already added" }
+        return listener
+    }
+
+    override fun removeCoListener(listener: IState.CoListener) {
+        _coListeners.remove(listener)
     }
 
     override fun <S : IState> addState(state: S, init: StateBlock<S>?): S {

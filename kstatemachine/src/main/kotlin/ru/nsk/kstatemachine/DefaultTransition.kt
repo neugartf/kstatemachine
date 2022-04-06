@@ -9,6 +9,10 @@ open class DefaultTransition<E : Event>(
 ) : InternalTransition<E> {
     private val _listeners = CopyOnWriteArraySet<Transition.Listener>()
     override val listeners: Collection<Transition.Listener> get() = _listeners
+
+    private val _coListeners = CopyOnWriteArraySet<Transition.CoListener>()
+    override val coListeners: Collection<Transition.CoListener> get() = _coListeners
+
     override val sourceState = sourceState as InternalState
 
     /**
@@ -51,6 +55,15 @@ open class DefaultTransition<E : Event>(
 
     override fun removeListener(listener: Transition.Listener) {
         _listeners.remove(listener)
+    }
+
+    override fun <L : Transition.CoListener> addCoListener(listener: L): L {
+        require(_coListeners.add(listener)) { "$listener is already added" }
+        return listener
+    }
+
+    override fun removeCoListener(listener: Transition.CoListener) {
+        _coListeners.remove(listener)
     }
 
     override fun isMatchingEvent(event: Event) = eventMatcher.match(event)

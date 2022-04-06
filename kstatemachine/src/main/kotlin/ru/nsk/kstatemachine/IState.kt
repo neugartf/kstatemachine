@@ -14,10 +14,14 @@ interface IState : TransitionStateApi, VisitorAcceptor {
     val isActive: Boolean
     val isFinished: Boolean
     val listeners: Collection<Listener>
+    val coListeners: Collection<CoListener>
     val childMode: ChildMode
 
     fun <L : Listener> addListener(listener: L): L
     fun removeListener(listener: Listener)
+
+    fun <L : CoListener> addCoListener(listener: L): L
+    fun removeCoListener(listener: CoListener)
 
     fun <S : IState> addState(state: S, init: StateBlock<S>? = null): S
 
@@ -43,6 +47,20 @@ interface IState : TransitionStateApi, VisitorAcceptor {
          * If child mode is [ChildMode.PARALLEL] notifies that all children has finished.
          */
         fun onFinished(transitionParams: TransitionParams<*>) = Unit
+    }
+
+    /**
+     * Same as [Listener] but with suspend functions
+     */
+    interface CoListener {
+        suspend fun onEntry(transitionParams: TransitionParams<*>) = Unit
+        suspend fun onExit(transitionParams: TransitionParams<*>) = Unit
+
+        /**
+         * If child mode is [ChildMode.EXCLUSIVE] notifies that child [IFinalState] is entered.
+         * If child mode is [ChildMode.PARALLEL] notifies that all children has finished.
+         */
+        suspend fun onFinished(transitionParams: TransitionParams<*>) = Unit
     }
 }
 
@@ -135,21 +153,39 @@ inline fun <reified S : IState> IState.requireState(recursive: Boolean = true) =
 
 operator fun <S : IState> S.invoke(block: StateBlock<S>) = block()
 
-fun <S : IState> S.onEntry(block: S.(TransitionParams<*>) -> Unit) {
+inline fun <S : IState> S.onEntry(crossinline block: S.(TransitionParams<*>) -> Unit) {
     addListener(object : IState.Listener {
         override fun onEntry(transitionParams: TransitionParams<*>) = block(transitionParams)
     })
 }
 
-fun <S : IState> S.onExit(block: S.(TransitionParams<*>) -> Unit) {
+inline fun <S : IState> S.onExit(crossinline block: S.(TransitionParams<*>) -> Unit) {
     addListener(object : IState.Listener {
         override fun onExit(transitionParams: TransitionParams<*>) = block(transitionParams)
     })
 }
 
-fun <S : IState> S.onFinished(block: S.(TransitionParams<*>) -> Unit) {
+inline fun <S : IState> S.onFinished(crossinline block: S.(TransitionParams<*>) -> Unit) {
     addListener(object : IState.Listener {
         override fun onFinished(transitionParams: TransitionParams<*>) = block(transitionParams)
+    })
+}
+
+inline fun <S : IState> S.onCoEntry(crossinline block: suspend S.(TransitionParams<*>) -> Unit) {
+    addCoListener(object : IState.CoListener {
+        override suspend fun onEntry(transitionParams: TransitionParams<*>) = block(transitionParams)
+    })
+}
+
+inline fun <S : IState> S.onCoExit(crossinline block: suspend S.(TransitionParams<*>) -> Unit) {
+    addCoListener(object : IState.CoListener {
+        override suspend fun onExit(transitionParams: TransitionParams<*>) = block(transitionParams)
+    })
+}
+
+inline fun <S : IState> S.onCoFinished(crossinline block: suspend S.(TransitionParams<*>) -> Unit) {
+    addCoListener(object : IState.CoListener {
+        override suspend fun onFinished(transitionParams: TransitionParams<*>) = block(transitionParams)
     })
 }
 

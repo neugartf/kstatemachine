@@ -6,6 +6,7 @@ import ru.nsk.kstatemachine.TransitionDirectionProducerPolicy.DefaultPolicy
 @StateMachineDslMarker
 abstract class TransitionBuilder<E : Event>(protected val name: String?, protected val sourceState: IState) {
     var listener: Transition.Listener? = null
+    var coListener: Transition.CoListener? = null
     lateinit var eventMatcher: EventMatcher<E>
 
     abstract fun build(): Transition<E>
@@ -39,6 +40,7 @@ abstract class GuardedTransitionBuilder<E : Event, S : IState>(name: String?, so
 
         val transition = DefaultTransition(name, eventMatcher, sourceState, direction)
         listener?.let { transition.addListener(it) }
+        coListener?.let { transition.addCoListener(it) }
         return transition
     }
 }
@@ -57,6 +59,7 @@ abstract class GuardedTransitionOnBuilder<E : Event, S : IState>(name: String?, 
 
         val transition = DefaultTransition(name, eventMatcher, sourceState, direction)
         listener?.let { transition.addListener(it) }
+        coListener?.let { transition.addCoListener(it) }
         return transition
     }
 }
@@ -75,6 +78,7 @@ class ConditionalTransitionBuilder<E : Event>(name: String?, sourceState: IState
 
         val transition = DefaultTransition(name, eventMatcher, sourceState, direction)
         listener?.let { transition.addListener(it) }
+        coListener?.let { transition.addCoListener(it) }
         return transition
     }
 }
@@ -106,6 +110,16 @@ inline fun <reified E : Event> TransitionBuilder<E>.onTriggered(crossinline bloc
     listener = object : Transition.Listener {
         @Suppress("UNCHECKED_CAST")
         override fun onTriggered(transitionParams: TransitionParams<*>) =
+            block(transitionParams as TransitionParams<E>)
+    }
+}
+
+inline fun <reified E : Event> TransitionBuilder<E>.onCoTriggered(crossinline block: suspend (TransitionParams<E>) -> Unit) {
+    require(coListener == null) { "Listener is already set, only one listener is allowed in a builder" }
+
+    coListener = object : Transition.CoListener {
+        @Suppress("UNCHECKED_CAST")
+        override suspend fun onTriggered(transitionParams: TransitionParams<*>) =
             block(transitionParams as TransitionParams<E>)
     }
 }
