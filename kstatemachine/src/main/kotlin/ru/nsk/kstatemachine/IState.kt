@@ -55,11 +55,6 @@ interface IState : TransitionStateApi, VisitorAcceptor {
     interface CoListener {
         suspend fun onEntry(transitionParams: TransitionParams<*>) = Unit
         suspend fun onExit(transitionParams: TransitionParams<*>) = Unit
-
-        /**
-         * If child mode is [ChildMode.EXCLUSIVE] notifies that child [IFinalState] is entered.
-         * If child mode is [ChildMode.PARALLEL] notifies that all children has finished.
-         */
         suspend fun onFinished(transitionParams: TransitionParams<*>) = Unit
     }
 }

@@ -6,4 +6,5 @@ object Versions {
     const val mockk = "1.12.2"
     const val kotestAssertions = "5.1.0"
     const val kotestRunner = "5.1.0"
+    const val coroutinesCore = "1.6.3"
 }
